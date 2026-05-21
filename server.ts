@@ -117,7 +117,7 @@ app.use("/uploads", express.static(UPLOADS_DIR));
 
 // Create a unique salt on boot to hash the password securely
 const HASH_SALT = crypto.randomBytes(16).toString("hex");
-const VAULT_PASS = process.env.VAULT_PASSWORD || "admin123";
+const VAULT_PASS = process.env.VAULT_PASSWORD || "123465";
 
 // Hash function
 function hashPassword(password: string, salt: string): string {

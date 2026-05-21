@@ -10,7 +10,7 @@ To guarantee secure vault communications, define the following variables in your
 
 | Variable Name | Required | Description |
 |---|---|---|
-| `VAULT_PASSWORD` | **Yes** | Master cryptographic password credentials to unlock the gallery (e.g. `admin123`). |
+| `VAULT_PASSWORD` | **Yes** | Master cryptographic password credentials to unlock the gallery (e.g. `123465`). |
 | `SUPABASE_URL` | Optional | Your Supabase Project API endpoint URL (e.g. `https://your-project.supabase.co`). |
 | `SUPABASE_ANON_KEY` | Optional | Your Supabase Project Anonymous API security key. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Optional | Your Supabase Project Service Role key (recommended for secure server-side bucket writes). |
