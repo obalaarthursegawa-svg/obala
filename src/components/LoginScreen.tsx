@@ -195,7 +195,7 @@ export default function LoginScreen({ onUnlockSuccess, status, onRefreshStatus }
             {cooldownSecondsLeft > 0 ? (
               <span className="text-rose-400">LOCKDOWN ACTIVE</span>
             ) : (
-              <span>DECRYPT CRYPTOVAULT</span>
+              <span>OBALA ARTHUR'S SECRET GALLERY</span>
             )}
           </h2>
           <p className="text-xs text-slate-400 mt-1 text-center max-w-xs font-sans">

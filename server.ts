@@ -73,6 +73,38 @@ if (isSupabaseConfigured) {
   try {
     supabaseClient = createClient(supabaseUrl!, supabaseKey!);
     console.log("Supabase Client initialized successfully for backend proxy routes.");
+    
+    // Auto-create storage buckets if missing
+    (async () => {
+      try {
+        const { data: buckets, error: listError } = await supabaseClient.storage.listBuckets();
+        const hasIntruders = buckets ? buckets.some((b: any) => b.name === "intruders" || b.id === "intruders") : false;
+        const hasVault = buckets ? buckets.some((b: any) => b.name === "vault" || b.id === "vault") : false;
+        
+        if (!hasIntruders) {
+          console.log("Bucket 'intruders' not detected. Creating it dynamically...");
+          await supabaseClient.storage.createBucket("intruders", { public: true });
+        } else {
+          console.log("Bucket 'intruders' is verified to exist on Supabase.");
+        }
+        
+        if (!hasVault) {
+          console.log("Bucket 'vault' not detected. Creating it dynamically...");
+          await supabaseClient.storage.createBucket("vault", { public: true });
+        } else {
+          console.log("Bucket 'vault' is verified to exist on Supabase.");
+        }
+      } catch (e) {
+        // Fallback: silently attempt direct bucket creation if bucket listing is restricted
+        try {
+          await supabaseClient.storage.createBucket("intruders", { public: true });
+        } catch (_) {}
+        try {
+          await supabaseClient.storage.createBucket("vault", { public: true });
+        } catch (_) {}
+        console.log("Probed and ensured storage buckets 'intruders' and 'vault' on Supabase.");
+      }
+    })();
   } catch (error) {
     console.error("Failed to initialize Supabase client:", error);
   }
@@ -216,15 +248,26 @@ app.post("/api/unlock", async (req, res) => {
 
     if (isSupabaseConfigured && supabaseClient) {
       try {
-        const { data, error } = await supabaseClient.storage
+        let uploadResult = await supabaseClient.storage
           .from("intruders")
           .upload(fileName, imgBuffer, {
             contentType: "image/jpeg",
             upsert: true,
           });
 
-        if (error) {
-          throw error;
+        if (uploadResult.error) {
+          // If bucket is missing, dynamically create and retry
+          if (uploadResult.error.message?.includes("Bucket not found") || (uploadResult.error as any).status === 404) {
+            console.log("Bucket 'intruders' not found during capture. Creating dynamically...");
+            await supabaseClient.storage.createBucket("intruders", { public: true });
+            uploadResult = await supabaseClient.storage
+              .from("intruders")
+              .upload(fileName, imgBuffer, {
+                contentType: "image/jpeg",
+                upsert: true,
+              });
+          }
+          if (uploadResult.error) throw uploadResult.error;
         }
 
         const { data: urlObj } = supabaseClient.storage
@@ -232,8 +275,8 @@ app.post("/api/unlock", async (req, res) => {
           .getPublicUrl(fileName);
 
         logSavedUrl = urlObj.publicUrl;
-      } catch (err) {
-        console.error("Supabase Storage upload failed, fallback to local storage:", err);
+      } catch (err: any) {
+        console.warn(`Supabase Storage upload fallback triggered: ${err?.message || err}. Saving securely to local storage.`);
         // Fallback to local
         const localPath = path.join(UPLOADS_DIR, fileName);
         fs.writeFileSync(localPath, imgBuffer);
@@ -268,8 +311,8 @@ app.post("/api/unlock", async (req, res) => {
 
       if (error) throw error;
       console.log("Intruder logged systematically into Supabase Database.");
-    } catch (err) {
-      console.error("Supabase Database log insertion failed, fallback to offline DB:", err);
+    } catch (err: any) {
+      console.warn(`[Supabase DB Warning] Failed to insert log to 'intruder_logs' (${err?.message || "Table might not be created yet. Please execute setup.sql inside your Supabase dashboard."}). Logging caught details into local secure database instead.`);
       localDB.intruderLogs.unshift(logData);
       saveLocalDB(localDB);
     }
@@ -300,8 +343,8 @@ app.get("/api/admin/logs", authorizeRequest, async (req, res) => {
 
       if (error) throw error;
       return res.json(data);
-    } catch (err) {
-      console.error("Supabase DB fetch failed, displaying local fallbacks:", err);
+    } catch (err: any) {
+      console.warn(`[Supabase DB Warning] Failed to fetch 'intruder_logs' (${err?.message || "Table might not be created yet. Please execute setup.sql inside your Supabase dashboard."}). Displaying local secure storage fallbacks.`);
       return res.json(localDB.intruderLogs);
     }
   }
@@ -322,8 +365,8 @@ app.post("/api/admin/clear-logs", authorizeRequest, async (req, res) => {
         .neq("id", "00000000-0000-0000-0000-000000000000"); // deletes all
 
       if (error) throw error;
-    } catch (err) {
-      console.error("Supabase DB delete failed, flushing offline DB logs:", err);
+    } catch (err: any) {
+      console.warn(`[Supabase DB Warning] Failed to delete 'intruder_logs' records (${err?.message || "Table might not be created or accessible."}). Flushing local secure alarm logs.`);
     }
   }
 
@@ -345,8 +388,8 @@ app.get("/api/gallery", authorizeRequest, async (req, res) => {
 
       if (error) throw error;
       return res.json(data);
-    } catch (err) {
-      console.error("Supabase DB fetch failed, displaying local gallery assets:", err);
+    } catch (err: any) {
+      console.warn(`[Supabase DB Warning] Failed to fetch 'vault_items' (${err?.message || "Table might not be created yet. Please execute setup.sql inside your Supabase dashboard."}). Displaying local secure gallery assets.`);
       return res.json(localDB.vaultItems);
     }
   }
@@ -396,22 +439,35 @@ app.post("/api/gallery/upload", authorizeRequest, async (req, res) => {
 
   if (isSupabaseConfigured && supabaseClient) {
     try {
-      const { data, error } = await supabaseClient.storage
+      let uploadResult = await supabaseClient.storage
         .from("vault")
         .upload(fileName, imgBuffer, {
           contentType: "image/jpeg",
           upsert: true,
         });
 
-      if (error) throw error;
+      if (uploadResult.error) {
+        // If vault bucket is missing, dynamically create and retry
+        if (uploadResult.error.message?.includes("Bucket not found") || (uploadResult.error as any).status === 404) {
+          console.log("Bucket 'vault' not found during gallery upload. Creating dynamically...");
+          await supabaseClient.storage.createBucket("vault", { public: true });
+          uploadResult = await supabaseClient.storage
+            .from("vault")
+            .upload(fileName, imgBuffer, {
+              contentType: "image/jpeg",
+              upsert: true,
+            });
+        }
+        if (uploadResult.error) throw uploadResult.error;
+      }
 
       const { data: urlObj } = supabaseClient.storage
         .from("vault")
         .getPublicUrl(fileName);
 
       fileSavedUrl = urlObj.publicUrl;
-    } catch (err) {
-      console.error("Supabase Storage upload failed, fallback to local static:", err);
+    } catch (err: any) {
+      console.warn(`Supabase Storage upload fallback triggered for gallery: ${err?.message || err}. Saving securely to local static uploads.`);
       const localPath = path.join(UPLOADS_DIR, fileName);
       fs.writeFileSync(localPath, imgBuffer);
       fileSavedUrl = `/uploads/${fileName}`;
@@ -436,8 +492,8 @@ app.post("/api/gallery/upload", authorizeRequest, async (req, res) => {
         .insert([galleryData]);
 
       if (error) throw error;
-    } catch (err) {
-      console.error("Supabase Database item save failed, using local fallback DB:", err);
+    } catch (err: any) {
+      console.warn(`[Supabase DB Warning] Failed to save asset to 'vault_items' (${err?.message || "Table might not be created yet. Please execute setup.sql inside your Supabase dashboard."}). Saving into local fallback database instead.`);
       localDB.vaultItems.unshift(galleryData);
       saveLocalDB(localDB);
     }
@@ -466,8 +522,8 @@ app.post("/api/gallery/delete", authorizeRequest, async (req, res) => {
         .eq("id", id);
 
       if (error) throw error;
-    } catch (err) {
-      console.error("Supabase DB delete failed, applying local database elimination:", err);
+    } catch (err: any) {
+      console.warn(`[Supabase DB Warning] Failed to delete 'vault_items' record (${err?.message || "Table might not be created or accessible."}). Shredding local secure backup.`);
     }
   }
 

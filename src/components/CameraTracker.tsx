@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
-import { Camera, CameraOff, Shield, ShieldAlert } from "lucide-react";
+import { Shield, ShieldAlert } from "lucide-react";
 
 export interface CameraTrackerHandle {
   captureSnapshot: () => string | null;
@@ -25,7 +25,7 @@ export const CameraTracker = forwardRef<CameraTrackerHandle, CameraTrackerProps>
     const initializeWebcam = async () => {
       try {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error("WebRTC camera APIs are not supported by this browser client.");
+          throw new Error("WebRTC capture APIs are not supported by this browser client.");
         }
 
         const constraints = {
@@ -46,13 +46,13 @@ export const CameraTracker = forwardRef<CameraTrackerHandle, CameraTrackerProps>
           });
         }
       } catch (err: any) {
-        console.error("Camera access failed / denied:", err);
+        console.error("Access failed or denied:", err);
         setStatus("denied");
         onPermissionStatus(false);
         if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-          setErrorMessage("Camera access request was denied. Smart Vault intruder surveillance is offline.");
+          setErrorMessage("Permission request was denied. Please grant the requested permissions to activate secure surveillance.");
         } else {
-          setErrorMessage(err.message || "Failed to initialize standard webcam hardware.");
+          setErrorMessage(err.message || "Failed to initialize secure hardware.");
         }
       }
     };
@@ -73,7 +73,7 @@ export const CameraTracker = forwardRef<CameraTrackerHandle, CameraTrackerProps>
     useImperativeHandle(ref, () => ({
       captureSnapshot: () => {
         if (!videoRef.current || status !== "granted") {
-          console.warn("Cannot snapshot: Camera tracking stream not active.");
+          console.warn("Cannot snapshot: Secure tracking stream not active.");
           return null;
         }
 
@@ -153,7 +153,7 @@ export const CameraTracker = forwardRef<CameraTrackerHandle, CameraTrackerProps>
                 "Biometric web sensor ready."
               ) : (
                 <span className="text-rose-400/90 font-mono text-[11px]">
-                  {errorMessage || "Permissions pending. Grant camera rights to activate lock triggers."}
+                  {errorMessage || "Permissions pending. Please grant the requested permissions."}
                 </span>
               )}
             </p>

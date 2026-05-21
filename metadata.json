@@ -1,5 +1,5 @@
 {
-  "name": "Smart Vault",
+  "name": "OBALA ARTHUR'S SECRET GALLERY",
   "description": "A modern, secure private gallery vault with webcam intruder capture alerts, analytics, and auto-logging.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

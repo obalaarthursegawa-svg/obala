@@ -142,10 +142,10 @@ export default function App() {
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-wider text-white uppercase leading-none">
-                  AXON-9
+                  OBALA ARTHUR
                 </h1>
                 <p className="font-mono text-[9px] tracking-[0.2em] text-cyan-400 mt-1 uppercase select-none">
-                  Smart Vault Protocol v4.0.2
+                  SECRET GALLERY SECURE INTERFACE
                 </p>
               </div>
             </div>

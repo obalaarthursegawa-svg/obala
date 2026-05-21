@@ -116,11 +116,11 @@ export default function IntruderDashboard({ logs, authToken, onRefreshLogs }: In
           <div className="absolute top-2 right-2 p-1 bg-slate-900 border border-slate-800 rounded text-emerald-400">
             <BarChart2 className="w-4 h-4" />
           </div>
-          <span className="font-mono text-[9px] font-semibold text-slate-500 uppercase tracking-widest block">CAMERA FEED SECURITY</span>
+          <span className="font-mono text-[9px] font-semibold text-slate-500 uppercase tracking-widest block">SURVEILLANCE FEED SECURITY</span>
           <span className="font-mono text-sm font-bold text-emerald-400 block mt-3.5 uppercase tracking-wider">
             100% ONLINE
           </span>
-          <span className="text-[10px] text-slate-500 font-mono mt-1 block">SECURE MEDIA CAPABILITY</span>
+          <span className="text-[10px] text-slate-500 font-mono mt-1 block">SECURE CAPABILITY ACTIVE</span>
         </div>
       </div>
 
