@@ -29,5 +29,6 @@ export interface VaultStatus {
   cooldownUntil: string | null;
   failedAttempts: number;
   isSupabaseConnected: boolean;
+  isTablesConfigured?: boolean;
   rateLimitMax: number;
 }

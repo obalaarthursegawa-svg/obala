@@ -124,7 +124,11 @@ export default function LoginScreen({ onUnlockSuccess, status, onRefreshStatus }
         });
       }
     } catch (err: any) {
-      setErrorMessage("Secure Vault terminal disconnected. Server offline.");
+      if (window.location.hostname.includes("vercel.app")) {
+        setErrorMessage("Secure Vault terminal disconnected. Server offline. (Tip: Vercel static hosting does not execute the Node/Express backend 'server.ts' automatically. Please use your official AI Studio Cloud Run URL where the backend is fully active and deployed!)");
+      } else {
+        setErrorMessage("Secure Vault terminal disconnected. Server offline. Please make sure the backend server.ts is running.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -202,6 +206,51 @@ export default function LoginScreen({ onUnlockSuccess, status, onRefreshStatus }
             Archive access is restricted. Authentication signature is required for cryptographic entry.
           </p>
         </div>
+
+        {status.isSupabaseConnected && status.isTablesConfigured === false && (
+          <div className="mb-4 p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/5 text-amber-200 text-left text-xs space-y-2">
+            <div className="flex items-center gap-1.5 font-bold font-mono text-[10px] uppercase tracking-wider text-amber-400">
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <span>Missing Database Tables</span>
+            </div>
+            <p className="text-slate-300 text-[11px] leading-relaxed">
+              Your Supabase keys are successfully configured! However, the database tables (<code className="font-mono text-[10.5px] text-amber-350 bg-amber-500/10 px-1 rounded">intruder_logs</code> and <code className="font-mono text-[10.5px] text-amber-350 bg-amber-500/10 px-1 rounded">vault_items</code>) are missing from your online project.
+            </p>
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  const sql = `-- Run this SQL script in your Supabase SQL Editor:
+create extension if not exists "uuid-ossp";
+
+-- 1. Create intruder surveillance logs table
+create table if not exists public.intruder_logs (
+    id uuid primary key default uuid_generate_v4(),
+    image_url text not null,
+    timestamp timestamp with time zone default timezone('utc'::text, now()) not null,
+    ip_address text not null,
+    device_info text not null,
+    failed_attempts integer not null default 1,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 2. Create vault items table
+create table if not exists public.vault_items (
+    id uuid primary key default uuid_generate_v4(),
+    title text not null default 'Secured Asset',
+    url text not null,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);`;
+                  navigator.clipboard.writeText(sql);
+                  alert("Supabase SQL queries copied to clipboard! Paste and run it in your Supabase SQL Editor dashboard to create the tables.");
+                }}
+                className="w-full py-1.5 px-3 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/20 hover:border-amber-500/40 text-[10px] font-bold font-mono tracking-wider transition-all duration-155 cursor-pointer uppercase flex items-center justify-center gap-1.5 text-amber-300 hover:text-white"
+              >
+                Copy SQL Setup Script
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Camera Sensor Component */}
         <div className="my-5">

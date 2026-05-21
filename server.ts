@@ -161,7 +161,7 @@ function authorizeRequest(req: express.Request, res: express.Response, next: exp
 /** 
  * API Route: Status check 
  */
-app.get("/api/status", (req, res) => {
+app.get("/api/status", async (req, res) => {
   const ip = getClientIp(req);
   let state = ipLimits.get(ip);
   if (!state) {
@@ -175,11 +175,43 @@ app.get("/api/status", (req, res) => {
     ipLimits.set(ip, state);
   }
 
+  let isTablesConfigured = false;
+  if (isSupabaseConfigured && supabaseClient) {
+    try {
+      // Probe to check for table existence
+      const [{ error: logsErr }, { error: itemsErr }] = await Promise.all([
+        supabaseClient.from("intruder_logs").select("id").limit(1),
+        supabaseClient.from("vault_items").select("id").limit(1)
+      ]);
+
+      const isLogsMissing = logsErr && (
+        logsErr.code === "PGRST116" || 
+        logsErr.message?.includes("Could not find the table") || 
+        logsErr.message?.includes("does not exist") ||
+        logsErr.message?.includes("relation")
+      );
+
+      const isItemsMissing = itemsErr && (
+        itemsErr.code === "PGRST116" || 
+        itemsErr.message?.includes("Could not find the table") || 
+        itemsErr.message?.includes("does not exist") ||
+        itemsErr.message?.includes("relation")
+      );
+
+      if (!isLogsMissing && !isItemsMissing) {
+        isTablesConfigured = true;
+      }
+    } catch (e) {
+      isTablesConfigured = false;
+    }
+  }
+
   res.json({
     isLocked: true,
     cooldownUntil: state.cooldownUntil ? new Date(state.cooldownUntil).toISOString() : null,
     failedAttempts: state.failedAttempts,
     isSupabaseConnected: isSupabaseConfigured,
+    isTablesConfigured: isTablesConfigured,
     rateLimitMax: 5,
   });
 });

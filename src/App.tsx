@@ -246,6 +246,52 @@ export default function App() {
                   </button>
                 </div>
 
+                {status.isSupabaseConnected && status.isTablesConfigured === false && (
+                  <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 text-left text-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex gap-2.5 items-start">
+                        <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-bold font-mono text-[11px] uppercase tracking-wider text-amber-400">Database Tables Missing in Supabase</h4>
+                          <p className="text-slate-300 text-[11px] leading-relaxed mt-0.5">
+                            The cloud vault is currently running in a safe local sandbox mode (<code className="font-mono text-[10.5px] text-amber-300">data/db.json</code>) because the table structures were not detected on your live Supabase database. Copy the DDL SQL query script and run it in your Supabase dashboard to enable cloud storage.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const sql = `-- Run this SQL script in your Supabase SQL Editor:
+create extension if not exists "uuid-ossp";
+
+-- 1. Create intruder surveillance logs table
+create table if not exists public.intruder_logs (
+    id uuid primary key default uuid_generate_v4(),
+    image_url text not null,
+    timestamp timestamp with time zone default timezone('utc'::text, now()) not null,
+    ip_address text not null,
+    device_info text not null,
+    failed_attempts integer not null default 1,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 2. Create vault items table
+create table if not exists public.vault_items (
+    id uuid primary key default uuid_generate_v4(),
+    title text not null default 'Secured Asset',
+    url text not null,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);`;
+                          navigator.clipboard.writeText(sql);
+                          alert("Supabase SQL queries copied! Paste and run it inside your Supabase SQL editor.");
+                        }}
+                        className="py-1.5 px-3 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/20 hover:border-amber-500/40 text-[10px] font-bold font-mono tracking-wider transition-all duration-150 shrink-0 uppercase cursor-pointer text-amber-300 hover:text-white"
+                      >
+                        Copy Setup SQL
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Sub Tab contents panels */}
                 <div className="relative">
                   {isLoadingData ? (
